@@ -41,3 +41,9 @@ cd msdocs-app-service-sqldb-dotnetcore
 dotnet ef database update
 dotnet run
 ```
+
+### Deploy to Azure Web App
+
+1. Open *DotNetCoreSqlDb.sln* in Visual Studio.
+1. Deploy to the Azure Web App instance
+1. Run any database migrations
