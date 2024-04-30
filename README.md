@@ -15,6 +15,13 @@ products:
 This is a sample application that you can use to follow along with the tutorial at 
 [Tutorial: Deploy an ASP.NET Core and Azure SQL Database app to Azure App Service](https://learn.microsoft.com/azure/app-service/tutorial-dotnetcore-sqldb-app). 
 
+Modifications made:
+1. Removed Distributed / Redis Cache as there's not a free way to deploy one of those.
+1. Upgraded to .NET 8
+1. EF Core 8
+1. Setup CI/CD via App Services Deployment Center
+
+
 ## Getting started
 
 ### Run from Visual Studio
