@@ -60,7 +60,7 @@ dotnet run
     1. Specify the Managed Identity created in the previous step
 1. In Visual Studio Publish via the provided YML file
 
-
+1. Setup Github action authentication via https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-portal%2Clinux
 ## Warnings about using a local cache instead of a distributed cache
 
 1. This is important since we are running on the free tiers of both the App Service and Azure SQL instances to save the redundant database lookups but if scaling beyond a since app service instance
