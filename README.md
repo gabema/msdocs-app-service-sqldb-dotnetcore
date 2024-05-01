@@ -39,4 +39,10 @@ dotnet run
 
 1. Upgrade to .NET 8
 1. Upgrade to Entity Framework Core 8
+1. Use a local in memory cache instead of the Azure Redis Cache since there is no free tier option.
 
+
+## Warnings about using a local cache instead of a distributed cache
+
+1. This is important since we are running on the free tiers of both the App Service and Azure SQL instances to save the redundant database lookups but if scaling beyond a since app service instance
+could lead to inconsistencies if the App Service is scaled up.

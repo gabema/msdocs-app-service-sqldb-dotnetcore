@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using DotNetCoreSqlDb;
-using DotNetCoreSqlDb.Data;
+﻿using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -16,10 +11,10 @@ namespace DotNetCoreSqlDb.Controllers
     public class TodosController : Controller
     {
         private readonly MyDatabaseContext _context;
-        private readonly IDistributedCache _cache;
+        private readonly IMemoryCache _cache;
         private readonly string _TodoItemsCacheKey = "TodoItemsList";
 
-        public TodosController(MyDatabaseContext context, IDistributedCache cache)
+        public TodosController(MyDatabaseContext context, IMemoryCache cache)
         {
             _context = context;
             _cache = cache;
@@ -28,19 +23,11 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Todos
         public async Task<IActionResult> Index()
         {
-            var todos = new List<Todo>();
-            byte[]? TodoListByteArray;
-
-            TodoListByteArray = await _cache.GetAsync(_TodoItemsCacheKey);
-            if (TodoListByteArray != null && TodoListByteArray.Length > 0)
+            var todos = TodoListCache;
+            if (TodoListCache.Count == 0)
             { 
-                todos = ConvertData<Todo>.ByteArrayToObjectList(TodoListByteArray);
-            }
-            else 
-            {
                 todos = await _context.Todo.ToListAsync();
-                TodoListByteArray = ConvertData<Todo>.ObjectListToByteArray(todos);
-                await _cache.SetAsync(_TodoItemsCacheKey, TodoListByteArray);
+                _cache.Set(_TodoItemsCacheKey, todos);
             }
 
             return View(todos);
@@ -49,34 +36,24 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Todos/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            byte[]? todoItemByteArray;
-            Todo? todo;
-
             if (id == null)
             {
                 return NotFound();
             }
 
-            todoItemByteArray = await _cache.GetAsync(GetTodoItemCacheKey(id));
+            var todo = TodoListCache.Find(t => t.ID == id);
 
-            if (todoItemByteArray != null && todoItemByteArray.Length > 0)
+            if (todo is null)
             {
-                todo = ConvertData<Todo>.ByteArrayToObject(todoItemByteArray);
-            }
-            else 
-            {
-                todo = await _context.Todo
-                .FirstOrDefaultAsync(m => m.ID == id);
-            if (todo == null)
-            {
-                return NotFound();
-            }
+                todo = await _context.Todo.FirstOrDefaultAsync(m => m.ID == id);
 
-                todoItemByteArray = ConvertData<Todo>.ObjectToByteArray(todo);
-                await _cache.SetAsync(GetTodoItemCacheKey(id), todoItemByteArray);
-            }
+                if (todo is null)
+                {
+                    return NotFound();
+                }
 
-            
+                TodoListCache.Add(todo);
+            }
 
             return View(todo);
         }
@@ -98,7 +75,7 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 _context.Add(todo);
                 await _context.SaveChangesAsync();
-                await _cache.RemoveAsync(_TodoItemsCacheKey);
+                _cache.Remove(_TodoItemsCacheKey);
                 return RedirectToAction(nameof(Index));
             }
             return View(todo);
@@ -112,7 +89,13 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
             }
 
-            var todo = await _context.Todo.FindAsync(id);
+            var todo = TodoListCache.Find(t => t.ID == id);
+
+            if (todo is null)
+            {
+                todo = await _context.Todo.FindAsync(id);
+            }
+
             if (todo == null)
             {
                 return NotFound();
@@ -138,8 +121,7 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     _context.Update(todo);
                     await _context.SaveChangesAsync();
-                    await _cache.RemoveAsync(GetTodoItemCacheKey(todo.ID));
-                    await _cache.RemoveAsync(_TodoItemsCacheKey);
+                    TodoListCache.Clear();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -185,22 +167,19 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 _context.Todo.Remove(todo);
                 await _context.SaveChangesAsync();
-                await _cache.RemoveAsync(GetTodoItemCacheKey(todo.ID));
-                await _cache.RemoveAsync(_TodoItemsCacheKey);
+                TodoListCache.Clear();
             }
             return RedirectToAction(nameof(Index));
+        }
+
+        private List<Todo> TodoListCache
+        {
+            get => ((List<Todo>?)_cache.Get(_TodoItemsCacheKey)) ?? [];
         }
 
         private bool TodoExists(int id)
         {
             return _context.Todo.Any(e => e.ID == id);
         }
-
-        private string GetTodoItemCacheKey(int? id)
-        {
-            return _TodoItemsCacheKey+"_&_"+id;
-        }
     }
-
-    
 }
