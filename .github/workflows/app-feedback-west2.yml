@@ -1,0 +1,63 @@
+name: Build and deploy .NET Core application to Web App app-feedback-west2
+on:
+  push:
+    branches:
+    - dev
+env:
+  AZURE_WEBAPP_NAME: app-feedback-west2
+  AZURE_WEBAPP_PACKAGE_PATH: DotNetCoreSqlDb/published
+  CONFIGURATION: Release
+  DOTNET_CORE_VERSION: 8.0.x
+  WORKING_DIRECTORY: DotNetCoreSqlDb
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+    - name: Restore
+      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+    - name: Build
+      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+    - name: Test
+      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+    - name: Publish
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+    - name: dotnet install ef
+      run: dotnet tool install -g dotnet-ef
+    - name: dotnet bundle migration
+      run: dotnet ef migrations bundle --runtime linux-x64 -p DotNetCoreSqlDb/DotNetCoreSqlDb.csproj -o \${{env.AZURE_WEBAPP_PACKAGE_PATH}}/migrate
+    - name: Publish Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write #This is required for requesting the JWT
+    steps:
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v3
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_47ACAC93F6C44E29A740C07033737D59 }}
+        tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_FE3AB66113274466BE3DAE2C472C9534 }}
+        subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DA933A3A87AC4C7C808541A417205017 }}
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.app_feedback_west2_DA4F }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

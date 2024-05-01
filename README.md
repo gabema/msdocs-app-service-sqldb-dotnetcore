@@ -40,7 +40,7 @@ dotnet run
 1. Upgrade to .NET 8
 1. Upgrade to Entity Framework Core 8
 1. Use a local in memory cache instead of the Azure Redis Cache since there is no free tier option.
-
+1. Add a Github action for CI/CD deployment of App service and db migration script
 
 ## Warnings about using a local cache instead of a distributed cache
 
