@@ -41,6 +41,25 @@ dotnet run
 1. Upgrade to Entity Framework Core 8
 1. Use a local in memory cache instead of the Azure Redis Cache since there is no free tier option.
 1. Add a Github action for CI/CD deployment of App service and db migration script
+1. Instead of using the `web app database` option we will create the needed resources manually
+    1. Create the Resource Group **rg**-*name*-*env*-*region*
+    1. Create the Azure SQL Service
+        1. Apply the Preview Offer for a free DB Instance!
+        1. Setup Database Name **db**-*name*-*env*-*region*
+        1. Setup the Server name **sql**-*name*-*env*-*region*
+        1. Select SQL And Microsoft Entra Authentication
+    1. Create the App Service **app**-*name*-*env*-*region*
+        1. Create the App service Plan **asp**-*name*-*env*-*region*
+        1. Create an App Insights instance **appi**-*name*-*env*-*region*
+1. Add a Managed Identity to the Resource Group
+    1. Create a new `User Assigned Managed Identity`
+    1. Add it to the resource group
+    1. Add the `Contributor` Role of the Managed Identity to the groupo
+1. In Web App > Deployment Center
+    1. Select Source: GitHub
+    1. Specify the Managed Identity created in the previous step
+1. In Visual Studio Publish via the provided YML file
+
 
 ## Warnings about using a local cache instead of a distributed cache
 
