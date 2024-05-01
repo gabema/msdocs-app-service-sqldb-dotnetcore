@@ -34,3 +34,9 @@ cd msdocs-app-service-sqldb-dotnetcore
 dotnet ef database update
 dotnet run
 ```
+
+# Modifications to Tutorial to get it to run on free tier services
+
+1. Upgrade to .NET 8
+1. Upgrade to Entity Framework Core 8
+
